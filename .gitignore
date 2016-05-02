@@ -1,0 +1,6 @@
+*~
+*.class
+.cache-main
+.classpath
+.project
+.settings/
