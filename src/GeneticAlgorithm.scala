@@ -1,5 +1,5 @@
 import scala.math.{cos, sin, abs, Pi, floor}
-
+import java.io.{PrintWriter, File}
 
 abstract class System (sizec: Int) {
   val size = sizec
@@ -9,6 +9,8 @@ abstract class System (sizec: Int) {
   def mutateIndividual(id: Int) : Unit
   
   def generateOffspring(idFirstParent: Int, idSecondParent: Int, idChild: Int) : Unit 
+  
+  def dumpFile(n: Int, id: Int) : Unit = {}
   
 }
 
@@ -45,8 +47,8 @@ class FourierSeriesFit (
   }
   
   def mutateSingle(coeff: Float, phaseShift: Float, amplitudeShift: Float) : Float = {
-    amplitudeShift*coeff
-    //amplitudeShift*(coeff + phaseShift)
+    //amplitudeShift*coeff
+    amplitudeShift*(coeff + phaseShift)
   }
   
   //50-50 mix of each parent
@@ -83,6 +85,15 @@ class FourierSeriesFit (
     generateOffspringCoefficient(cosineCoeffs, idFirstParent, idSecondParent, idChild)
   }
   
+  final override def dumpFile(n: Int, id: Int) : Unit = {
+    println("dumping...", n)
+    val writer = new PrintWriter(new File(f"/tmp/genetic$n%d.dat")) 
+
+    (cosineCoeffs(id), sineCoeffs(id)).zipped.foreach{(c, s) => writer.write(f"$c%f $s%f\n")}
+    
+    writer.close()
+  }
+
 }
 
 object GeneticAlgorithm {
@@ -91,50 +102,58 @@ object GeneticAlgorithm {
     ids.sortWith(fits(_) < fits(_)).zipWithIndex.foreach {x => ids(x._2) = x._1}
   }
   
-  def evolve(system: System) : Int = {
+  def evolve(system: System, dumpInterval: 
+      Int = 10, nMax: Int = 1000, convErr: Float = 1e-3f) : Int = {
     
-    var ids = Array.range(0, system.size)
-    var fits = Array.tabulate(system.size)(n => system.calculateFit(n))
+    val sortedIds = Array.range(0, system.size)
+    val fits = Array.tabulate(system.size)(n => system.calculateFit(n))
     var n = 0
     
-    inplaceSort(ids, fits)
+    inplaceSort(sortedIds, fits)
     
     do {
     
       //we let the winner generate offsprings with the rest of the
       //half winning population. The last half is replaced by these.
       for (i <- Range(1, system.size/2)) {
-        val child = ids(system.size - i)
-        system.generateOffspring(ids(0), ids(i), child)
+        val child = sortedIds(system.size - i)
+        system.generateOffspring(sortedIds(0), sortedIds(i), child)
         system.mutateIndividual(child)
         fits(child) = system.calculateFit(child)
       }
       
-      inplaceSort(ids, fits)
+      inplaceSort(sortedIds, fits)
     
       println("trying...", n)
       
       n += 1
       
-    } while (fits(ids(0)) > 1E-3 & n < 1000000)
+      if (n % dumpInterval == 0) {
+        system.dumpFile(n/dumpInterval, sortedIds(0))
+      }
       
-    println("n generations: ", n, " Winner fit: ", fits(ids(0)))
+    } while (fits(sortedIds(0)) > convErr & n < nMax)
+      
+    println("n generations: ", n, " Winner fit: ", fits(sortedIds(0)))
     
-    return ids(0)
+    return sortedIds(0)
     
   }
   
   def main(args: Array[String]): Unit = {
-    val size = 5
-    val ncoeffs = 2
+    val size = 100
+    val ncoeffs = 200
     
     val xn = 100
-    val xMax = 2.0f*Pi.toFloat
+    //val xMax = 2.0f*Pi.toFloat
+    val xMax = 1.0f
     
     val x = List.tabulate(xn)(n => xMax*(n/((xn - 1).toFloat)))
     
     //testcase with f(x) = sin(x) + 5cos(x)
-    val fff = new FourierSeriesFit(size, ncoeffs, x, (x: Float) => sin(x).toFloat + 5.0f*cos(2*x).toFloat)
+    //def targetFunction = (x: Float) => sin(x).toFloat + 5.0f*cos(2*x).toFloat + 2*sin(5*x).toFloat
+    def targetFunction = (x: Float) => if (x > 0.5) 1.0f else 0.0f
+    val fff = new FourierSeriesFit(size, ncoeffs, x, targetFunction)
     
     val winner = evolve(fff)
     
