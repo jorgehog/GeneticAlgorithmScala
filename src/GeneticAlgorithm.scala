@@ -103,7 +103,7 @@ object GeneticAlgorithm {
   }
   
   def evolve(system: System, dumpInterval: 
-      Int = 10, nMax: Int = 1000, convErr: Float = 1e-3f) : Int = {
+      Int = 10, nMax: Int = 10000, convErr: Float = 1e-3f) : Int = {
     
     val sortedIds = Array.range(0, system.size)
     val fits = Array.tabulate(system.size)(n => system.calculateFit(n))
@@ -126,11 +126,11 @@ object GeneticAlgorithm {
     
       println("trying...", n)
       
-      n += 1
-      
       if (n % dumpInterval == 0) {
         system.dumpFile(n/dumpInterval, sortedIds(0))
       }
+      
+      n += 1
       
     } while (fits(sortedIds(0)) > convErr & n < nMax)
       
@@ -142,17 +142,18 @@ object GeneticAlgorithm {
   
   def main(args: Array[String]): Unit = {
     val size = 100
-    val ncoeffs = 200
+    val ncoeffs = 20
     
-    val xn = 100
+    val xn = 1000
     //val xMax = 2.0f*Pi.toFloat
-    val xMax = 1.0f
+    val xMax = 0.5f
+    val xMin = -0.5f
     
-    val x = List.tabulate(xn)(n => xMax*(n/((xn - 1).toFloat)))
+    val x = List.tabulate(xn)(n => xMin + (xMax-xMin)*(n/((xn - 1).toFloat)))
     
     //testcase with f(x) = sin(x) + 5cos(x)
     //def targetFunction = (x: Float) => sin(x).toFloat + 5.0f*cos(2*x).toFloat + 2*sin(5*x).toFloat
-    def targetFunction = (x: Float) => if (x > 0.5) 1.0f else 0.0f
+    def targetFunction = (x: Float) => if (x > 0.0f) 1.0f else 0.0f
     val fff = new FourierSeriesFit(size, ncoeffs, x, targetFunction)
     
     val winner = evolve(fff)

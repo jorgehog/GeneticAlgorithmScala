@@ -13,11 +13,12 @@ class GeneticAlorithmScala(DCVizPlotter):
     loadLatest = True
     ziggyMagicNumber = 1
 
-    xmax = 1
+    xmax = 0.5
+    xmin = -0.5
     #xmax = 2*pi
 
     def analytical(self, x):
-        return 0 if x < 0.5 else 1
+        return 0 if x < 0 else 1
         #return sin(x) + 5*cos(2*x) + 2*sin(5*x)
 
     @staticmethod
@@ -34,7 +35,7 @@ class GeneticAlorithmScala(DCVizPlotter):
 
     def plot(self, data):
 
-        x = linspace(0, self.xmax, 1000)
+        x = linspace(self.xmin, self.xmax, 1000)
 
         if not (self.loadSequential or self.loadLatest):
             for entry in data:
@@ -45,5 +46,5 @@ class GeneticAlorithmScala(DCVizPlotter):
 
         self.subfigure.plot(x, [self.analytical(xi) for xi in x])
 
-        self.subfigure.set_ylim(-0.5, 1.5)
+        self.subfigure.set_ylim(-1, 2)
 
