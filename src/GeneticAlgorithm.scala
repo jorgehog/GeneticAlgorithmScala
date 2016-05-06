@@ -3,14 +3,15 @@ import java.io.{PrintWriter, File}
 import scala.util.Random
 
 
-abstract class System (sizec: Int) {
+abstract class Population (sizec: Int) {
   val size = sizec
   
   def calculateFit(id: Int) : Float 
   
   def mutateIndividual(id: Int) : Unit
   
-  def generateOffspring(idFirstParent: Int, idSecondParent: Int, idChild: Int) : Unit 
+  def generateOffspring(idFirstParent: Int, idSecondParent: Int, 
+        idChild: Int) : Unit 
   
   def dumpFile(n: Int, id: Int) : Unit = {}
 
@@ -27,7 +28,7 @@ abstract class System (sizec: Int) {
     
     inplaceSort(sortedIds, fits)
     
-    do {
+    while (fits(sortedIds(0)) > convErr & n < nMax) {
     
       //we let the winner generate offsprings with the rest of the
       //half winning population. The last half is replaced by these.
@@ -39,7 +40,6 @@ abstract class System (sizec: Int) {
       }
       
       inplaceSort(sortedIds, fits)
-    
       
       if (n % dumpInterval == 0) {
         println("Generation " + n.toString)
@@ -48,7 +48,7 @@ abstract class System (sizec: Int) {
       
       n += 1
       
-    } while (fits(sortedIds(0)) > convErr & n < nMax)
+    } 
       
     println("n generations: " + n.toString() + " Winner fit: " + fits(sortedIds(0)).toString())
     
@@ -62,7 +62,7 @@ class FourierSeriesFit (
     sizec: Int,
     ncoeffsc: Int, 
     x: List[Float], 
-    targetValuesc: List[Float]) extends System(sizec) {
+    targetValuesc: List[Float]) extends Population(sizec) {
   val ncoeffs = ncoeffsc
   val targetValues = targetValuesc
   
@@ -90,13 +90,13 @@ class FourierSeriesFit (
     (cosines, sines).zipped.map((c, s) => a0(id) + fourierElement(cosineCoeffs(id), c) + fourierElement(sineCoeffs(id), s))
   }
   
-  def mutateSingle(coeff: Float, amplitudeShift: Float) : Float = {
-    amplitudeShift*coeff
+  def mutateSingle(coeff: Float, changeFactor: Float) : Float = {
+    changeFactor*coeff
   }
   
   //50-50 mix of each parent
-  def generateOffspringCoefficient(coeffs: List[Array[Float]], idFirstParent: Int, 
-                                   idSecondParent: Int, idChild: Int) : Unit = {
+  def mixParents(coeffs: List[Array[Float]], idFirstParent: Int, 
+                   idSecondParent: Int, idChild: Int) : Unit = {
     (coeffs(idFirstParent), coeffs(idSecondParent), Range(0, ncoeffs))
       .zipped.foreach((s1, s2, i) => coeffs(idChild)(i) = (s1+s2)/2)
   }
@@ -122,19 +122,21 @@ class FourierSeriesFit (
     }
     else if (coefficient > ncoeffs) {
       val relCoeff = coefficient - ncoeffs - 1
-      cosineCoeffs(id)(relCoeff) = mutateSingle(cosineCoeffs(id)(relCoeff), changeFactor)
+      val coeff = cosineCoeffs(id)(relCoeff)
+      cosineCoeffs(id)(relCoeff) = mutateSingle(coeff, changeFactor)
     }
     else {
       val relCoeff = coefficient - 1
-      sineCoeffs(id)(relCoeff) = mutateSingle(sineCoeffs(id)(relCoeff), changeFactor)
+      val coeff = sineCoeffs(id)(relCoeff)
+      sineCoeffs(id)(relCoeff) = mutateSingle(coeff, changeFactor)
     }
   }
   
-  final override def generateOffspring (idFirstParent: Int, idSecondParent: Int, idChild: Int) : Unit = {
-    a0(idChild) = (a0(idFirstParent) + a0(idSecondParent))/2
+  final override def generateOffspring (idParent1: Int, idParent2: Int, idChild: Int) : Unit = {
+    a0(idChild) = (a0(idParent1) + a0(idParent2))/2
     
-    generateOffspringCoefficient(sineCoeffs, idFirstParent, idSecondParent, idChild)
-    generateOffspringCoefficient(cosineCoeffs, idFirstParent, idSecondParent, idChild)
+    mixParents(sineCoeffs, idParent1, idParent2, idChild)
+    mixParents(cosineCoeffs, idParent1, idParent2, idChild)
   }
   
   final override def dumpFile(n: Int, id: Int) : Unit = {
