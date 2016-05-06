@@ -1,5 +1,7 @@
 *~
 *.class
+*.png
+*.dat
 .cache-main
 .classpath
 .project
