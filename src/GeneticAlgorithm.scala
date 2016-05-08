@@ -162,7 +162,7 @@ object GeneticAlgorithm {
   
   def main(args: Array[String]): Unit = {
     val size = 100
-    val ncoeffs = 20
+    val ncoeffs = 10
    
     val xn = 1000
    
